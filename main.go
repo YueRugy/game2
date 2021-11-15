@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -13,30 +12,52 @@ import (
 
 const (
 	successPath = "success.png"
-    flagPath = "flag.png"
+	flagPath    = "flag.png"
+	bonusPath   = "bonus.png"
 )
 
 var (
 	successImg image.Image
-    flagImg    image.Image
-    bonusImg   image.Image
+	flagImg    image.Image
+	//bonusImg   image.Image
 )
 
 //var count = 0
 var ch = make(chan bool)
 
 var qh = make(chan bool)
+var bonusList []*Point
+
+type Point struct {
+	X int
+	Y int
+}
 
 func init() {
 
 	mat := gcv.IMRead(successPath)
 	successImg, _ = gcv.MatToImg(mat)
+	bonusList = make([]*Point, 0, 4)
+	bonusList = append(bonusList, &Point{
+		X: 519,
+		Y: 220},
+		&Point{
+			X: 917,
+			Y: 305,
+		},
+		&Point{
+			X: 400,
+			Y: 599,
+		},
+		&Point{
+			X: 810,
+			Y: 664,
+		})
+	//fMat := gcv.IMRead(flagPath)
+	//flagImg, _ = gcv.MatToImg(fMat)
 
-    fMat := gcv.IMRead(flagPath)
-    flagImg, _ = gcv.MatToImg(fMat)
-
-	bMat := gcv.IMRead("bonus.png")
-	bonusImg, _ = gcv.MatToImg(bMat)
+	//bMat := gcv.IMRead(bonusPath)
+	//bonusImg, _ = gcv.MatToImg(bMat)
 }
 
 func main() {
@@ -94,16 +115,16 @@ func skill() {
 //number 关卡
 func fight(number int) {
 	var jump bool
-	if 1<number&&number<5{
+	if 1 < number && number < 5 {
 		go click()
 		<-qh
 		robotgo.MoveClick(178, 509, "left", true)
 		time.Sleep(2 * time.Second)
-        //点击或者进入战斗房间
-       //click 函数说明已经可以点击     
+		//点击或者进入战斗房间
+		//click 函数说明已经可以点击
 		robotgo.MoveClick(1071, 658)
-		time.Sleep(10 * time.Second)
-        //判断是房间还是奖励项
+		time.Sleep(18 * time.Second)
+		//判断是房间还是奖励项
 		jump = isGo()
 		fmt.Println(jump)
 
@@ -114,12 +135,11 @@ func fight(number int) {
 			time.Sleep(3 * time.Second)
 			fmt.Println("click...............")
 			return
-        }
+		}
 	}
 
-
-    //不是第一关卡和boss关卡 要执行战斗开始按钮
-	if number==1||number==5 {
+	//不是第一关卡和boss关卡 要执行战斗开始按钮
+	if number == 1 || number == 5 {
 		//战斗开始按钮
 		robotgo.MoveMouse(1071, 658)
 		for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
@@ -163,16 +183,18 @@ Loop:
 		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(448, 354, "left", true)
 		time.Sleep(18 * time.Second)
+		robotgo.MoveClick(100, 200, "left", true)
+		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(781, 369, "left")
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(782, 626, "left", true)
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 
-	}else {
+	} else {
 		robotgo.MoveClick(648, 354, "left", true)
 		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(648, 354, "left", true)
-		time.Sleep(12 * time.Second)
+		time.Sleep(18 * time.Second)
 		bonus()
 
 	}
@@ -201,50 +223,6 @@ func success() {
 	}
 	//Loop:
 	//return
-}
-
-func Opencv() {
-	name := "test.png"
-	name1 := "test_001.png"
-	robotgo.SaveCapture(name1, 10, 10, 30, 30)
-	robotgo.SaveCapture(name)
-
-	fmt.Print("gcv find image: ")
-	fmt.Println(gcv.FindImgFile(name1, name))
-	fmt.Println(gcv.FindAllImgFile(name1, name))
-	//gcv.FindAllImg()
-
-	bit := robotgo.OpenBitmap(name1)
-	defer robotgo.FindBitmap(bit)
-	fmt.Print("find bitmap: ")
-	fmt.Println(robotgo.FindBitmap(bit))
-
-	// bit0 := robotgo.CaptureScreen()
-	// img := robotgo.ToImage(bit0)
-	// bit1 := robotgo.CaptureScreen(10, 10, 30, 30)
-	// img1 := robotgo.ToImage(bit1)
-	// defer robotgo.FreeBitmapArr(bit0, bit1)
-	img := robotgo.CaptureImg()
-	mat := gcv.IMRead("test_001.png")
-	img1, err := gcv.MatToImg(mat)
-	if err != nil {
-		fmt.Println(err)
-	}
-	//img1 := robotgo.CaptureImg(10, 10, 30, 30)
-
-	fmt.Print("gcv find image: ")
-	fmt.Println(gcv.FindImg(img1, img))
-	fmt.Println()
-	x1, y1 := gcv.FindImgXY(img1, img)
-	robotgo.MoveClick(x1, y1, "left", true)
-
-	res := gcv.FindAllImg(img1, img)
-	fmt.Println(res[0].TopLeft.Y, res[0].Rects.TopLeft.X, res)
-	x, y := res[0].TopLeft.X, res[0].TopLeft.Y
-	robotgo.Move(x, y-rand.Intn(5))
-	robotgo.MilliSleep(100)
-	robotgo.Click()
-
 }
 
 //621 767 f8f8f8
@@ -280,15 +258,22 @@ func isGo() bool {
 }
 
 func bonus() {
-	img := robotgo.CaptureImg()
-	bonus := gcv.FindAllImg(bonusImg, img)
-	for _, box := range bonus {
-		x, y := box.Middle.X, box.Middle.Y
-		robotgo.MouseClick(x, y, "left", true)
+	for _, box := range bonusList {
+		robotgo.MoveClick(box.X, box.Y, "left", true)
 		time.Sleep(time.Second)
+
 	}
-	robotgo.MouseClick(643, 423, "left", true)
+	//img := robotgo.CaptureImg()
+	//bonus := gcv.FindAllImg(bonusImg, img)
+	//fmt.Println(len(bonus))
+	//for _, box := range bonus {
+	//	x, y := box.Middle.X, box.Middle.Y
+	//	fmt.Println(x, y)
+	//		robotgo.MoveClick(x, y, "left", true)
+	//	time.Sleep(time.Second)
+	//}
+	robotgo.MoveClick(643, 423, "left", true)
 	time.Sleep(5 * time.Second)
-	robotgo.MouseClick(633, 644, "left", true)
+	robotgo.MoveClick(633, 644, "left", true)
 	time.Sleep(2 * time.Second)
 }
