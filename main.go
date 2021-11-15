@@ -57,7 +57,7 @@ func start() {
 	time.Sleep(2 * time.Second)
 	//fight
 	for i := 0; i < 5; i++ {
-		fight(i)
+		fight(i + 1)
 	}
 	//战斗结算
 	robotgo.MoveClick(648, 354, "left", true)
@@ -117,6 +117,7 @@ func skill() {
 //number 关卡
 func fight(number int) {
 	var fighting bool
+
 	if number != 1 {
 		if number != 5 {
 			go click()
@@ -134,7 +135,11 @@ func fight(number int) {
 
 	}
 
-	if number == 1 {
+	if number == 5 {
+		fighting = true
+	}
+
+	if fighting {
 		//战斗开始按钮
 		robotgo.MoveMouse(1071, 658)
 		for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
@@ -265,6 +270,9 @@ func Opencv() {
 
 //621 767 f8f8f8
 func click() {
+	if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
+		qh <- true
+	}
 	fixX, fixY := 137, 385
 	constAdd := 55
 	ticker := time.NewTicker(time.Second)
