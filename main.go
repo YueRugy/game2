@@ -13,10 +13,13 @@ import (
 
 const (
 	successPath = "success.png"
+    flagPath = "flag.png"
 )
 
 var (
 	successImg image.Image
+    flagImg    image.Image
+    bonusImg   image.Image
 )
 
 //var count = 0
@@ -28,6 +31,12 @@ func init() {
 
 	mat := gcv.IMRead(successPath)
 	successImg, _ = gcv.MatToImg(mat)
+
+    fMat := gcv.IMRead(flagPath)
+    flagImg, _ = gcv.MatToImg(fMat)
+
+	bMat := gcv.IMRead("bonus.png")
+	bonusImg, _ = gcv.MatToImg(bMat)
 }
 
 func main() {
@@ -59,38 +68,6 @@ func start() {
 	for i := 0; i < 5; i++ {
 		fight(i + 1)
 	}
-	//战斗结算
-	robotgo.MoveClick(648, 354, "left", true)
-	time.Sleep(5 * time.Second)
-	robotgo.MoveClick(648, 354, "left", true)
-	time.Sleep(8 * time.Second)
-	//end
-	robotgo.MoveClick(781, 369, "left")
-	time.Sleep(2 * time.Second)
-	robotgo.MoveClick(782, 626, "left", true)
-	time.Sleep(2 * time.Second)
-	robotgo.MoveClick(516, 746, "left", true)
-	time.Sleep(2 * time.Second)
-
-	robotgo.MoveClick(736, 587, "left", true)
-	time.Sleep(2 * time.Second)
-	robotgo.MoveClick(543, 451, "left", true)
-	time.Sleep(2 * time.Second)
-	robotgo.MoveClick(697, 454, "left", true)
-	time.Sleep(8 * time.Second)
-	robotgo.MoveClick(679, 566, "left", true)
-	time.Sleep(8 * time.Second)
-
-	//robotgo.MoveMouse(1086, 374)
-	//for color := robotgo.GetPixelColor(1086, 374); !strings.HasPrefix(color, "bc"); {
-	//	fmt.Println(color)
-	//	time.Sleep(1 * time.Second)
-	//	color = robotgo.GetPixelColor(1086, 374)
-	//}
-	//robotgo.MouseClick("left", true)
-	//time.Sleep(2 * time.Second)
-	//x,y = robotgo.GetMousePos()
-
 }
 
 func skill() {
@@ -116,46 +93,48 @@ func skill() {
 
 //number 关卡
 func fight(number int) {
-	var fighting bool
-
-	if number != 1 {
-		if number != 5 {
-			go click()
-			<-qh
-		}
-
+	var jump bool
+	if 1<number&&number<5{
+		go click()
+		<-qh
+		robotgo.MoveClick(178, 509, "left", true)
+		time.Sleep(2 * time.Second)
+        //点击或者进入战斗房间
+       //click 函数说明已经可以点击     
 		robotgo.MoveClick(1071, 658)
-		time.Sleep(5 * time.Second)
-		if !isGo() {
-			robotgo.MoveClick(893, 309, "left", true)
-			time.Sleep(2 * time.Second)
-		} else {
-			fighting = true
-		}
+		time.Sleep(10 * time.Second)
+        //判断是房间还是奖励项
+		jump = isGo()
+		fmt.Println(jump)
 
+		if jump {
+			robotgo.MoveClick(176, 509, "left", true)
+			time.Sleep(3 * time.Second)
+			robotgo.MoveClick(557, 332, "left", true)
+			time.Sleep(3 * time.Second)
+			fmt.Println("click...............")
+			return
+        }
 	}
 
-	if number == 5 {
-		fighting = true
-	}
 
-	if fighting {
+    //不是第一关卡和boss关卡 要执行战斗开始按钮
+	if number==1||number==5 {
 		//战斗开始按钮
 		robotgo.MoveMouse(1071, 658)
 		for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
-			fmt.Println(color)
 			time.Sleep(1 * time.Second)
 			color = robotgo.GetPixelColor(1071, 658)
 		}
 		time.Sleep(2 * time.Second)
 		robotgo.MouseClick("left", true)
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 	}
+
 	//hero up
 	robotgo.MoveMouse(1086, 374)
 	for color := robotgo.GetPixelColor(1086, 374); color != "bc911f"; {
-		fmt.Println(color)
 		time.Sleep(1 * time.Second)
 		color = robotgo.GetPixelColor(1086, 374)
 	}
@@ -164,7 +143,6 @@ func fight(number int) {
 	go success()
 	for {
 		skill()
-		fmt.Println("hahah")
 		time.Sleep(25 * time.Second)
 		select {
 		case <-ch:
@@ -180,18 +158,17 @@ func fight(number int) {
 	}
 Loop:
 	fmt.Println("循环外")
-	if fighting && number != 5 {
-		robotgo.MoveClick(648, 354, "left", true)
+	if number != 5 {
+		robotgo.MoveClick(448, 354, "left", true)
 		time.Sleep(3 * time.Second)
-		robotgo.MoveClick(648, 354, "left", true)
-		time.Sleep(8 * time.Second)
+		robotgo.MoveClick(448, 354, "left", true)
+		time.Sleep(18 * time.Second)
 		robotgo.MoveClick(781, 369, "left")
 		time.Sleep(2 * time.Second)
 		robotgo.MoveClick(782, 626, "left", true)
 		time.Sleep(2 * time.Second)
 
-	}
-	if number == 5 {
+	}else {
 		robotgo.MoveClick(648, 354, "left", true)
 		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(648, 354, "left", true)
@@ -199,6 +176,8 @@ Loop:
 		bonus()
 
 	}
+	//Look:
+	//return
 }
 
 func success() {
@@ -212,7 +191,7 @@ func success() {
 		case <-ticker.C:
 			img := robotgo.CaptureImg()
 			li := gcv.FindAllImg(successImg, img)
-			fmt.Println(len(li))
+			//fmt.Println(len(li))
 			if len(li) > 0 {
 				ch <- true
 				return
@@ -276,6 +255,7 @@ func click() {
 	fixX, fixY := 137, 385
 	constAdd := 55
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
@@ -293,17 +273,14 @@ func click() {
 
 func isGo() bool {
 	img := robotgo.CaptureImg()
-	mat := gcv.IMRead("start.png")
-	startImg, _ := gcv.MatToImg(mat)
-	li := gcv.FindAllImg(startImg, img)
+	li := gcv.FindAllImg(flagImg, img)
+	fmt.Println(len(li))
 	return len(li) == 0
 
 }
 
 func bonus() {
 	img := robotgo.CaptureImg()
-	mat := gcv.IMRead("bonus.png")
-	bonusImg, _ := gcv.MatToImg(mat)
 	bonus := gcv.FindAllImg(bonusImg, img)
 	for _, box := range bonus {
 		x, y := box.Middle.X, box.Middle.Y
