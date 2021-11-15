@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"math/rand"
 	"strings"
 	"time"
@@ -10,13 +11,31 @@ import (
 	"github.com/vcaesar/gcv"
 )
 
-var count = 0
+const (
+	successPath = "success.png"
+)
+
+var (
+	successImg image.Image
+)
+
+//var count = 0
+var ch = make(chan bool)
+var qh = make(chan bool)
+
+func init() {
+
+	mat := gcv.IMRead(successPath)
+	successImg, _ = gcv.MatToImg(mat)
+}
 
 func main() {
 	time.Sleep(3 * time.Second)
-	//x, y := robotgo.GetMousePos()
-	//fmt.Println(x, y)
-	//fmt.Println(robotgo.GetPixelColor(x, y))
+	x, y := robotgo.GetMousePos()
+	fmt.Println(x, y)
+	robotgo.MoveMouse(x, y)
+	fmt.Println(robotgo.GetMouseColor())
+	//success()
 	//time.Sleep(1 * time.Second)
 	start()
 	//opencv()
@@ -33,7 +52,6 @@ func start() {
 		time.Sleep(1 * time.Second)
 		color = robotgo.GetPixelColor(984, 701)
 	}
-	fmt.Println("-------")
 	robotgo.MouseClick("left", true)
 	time.Sleep(2 * time.Second)
 	fight()
@@ -80,13 +98,13 @@ func skill() {
 	//第三个技能
 	robotgo.MoveClick(508, 346, "left", true)
 	time.Sleep(2 * time.Second)
-	time.Sleep(2 * time.Second)
-	robotgo.MoveMouse(1117, 366)
-	for color := robotgo.GetPixelColor(1117, 366); color != "41a328"; {
-		time.Sleep(3 * time.Second)
-		color = robotgo.GetPixelColor(1117, 366)
-	}
-	robotgo.MouseClick("left", true)
+	robotgo.MoveClick(1118, 359)
+	//robotgo.MoveMouse(1118, 359)
+	//for color := robotgo.GetPixelColor(1117, 366); color != "2e9f1b"; {
+	//	time.Sleep(3 * time.Second)
+	//	color = robotgo.GetPixelColor(1117, 366)
+	//}
+	//robotgo.MouseClick("left", true)
 	time.Sleep(2 * time.Second)
 
 }
@@ -100,7 +118,6 @@ func fight() {
 		color = robotgo.GetPixelColor(1071, 658)
 	}
 	time.Sleep(2 * time.Second)
-	fmt.Println("-------")
 	robotgo.MouseClick("left", true)
 	time.Sleep(1 * time.Second)
 	//hero up
@@ -110,15 +127,46 @@ func fight() {
 		time.Sleep(1 * time.Second)
 		color = robotgo.GetPixelColor(1086, 374)
 	}
-	robotgo.MouseClick("left", true)
-	time.Sleep(8 * time.Second)
+	robotgo.MoveClick(1086, 374, "left", true)
+	time.Sleep(15 * time.Second)
+	go success()
 	for {
 		skill()
-		robotgo.MoveMouse(621, 767)
-		if robotgo.GetPixelColor(621, 767) == "f8f8f8" {
-			break
+		fmt.Println("hahah")
+		time.Sleep(25 * time.Second)
+		select {
+		case <-ch:
+			qh <- true
+			goto Loop
+		default:
+			continue
+		}
+		//robotgo.MoveMouse(621, 767)
+		//if robotgo.GetPixelColor(621, 767) != "f8f8f8" {
+		//break
+		//}
+	}
+Loop:
+	fmt.Println("循环外")
+}
+
+func success() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-qh:
+			goto Loop
+		case <-ticker.C:
+			img := robotgo.CaptureImg()
+			li := gcv.FindAllImg(successImg, img)
+			if len(li) > 0 {
+				ch <- true
+			}
 		}
 	}
+Loop:
+	return
 }
 
 func Opencv() {
