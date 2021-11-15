@@ -21,6 +21,7 @@ var (
 
 //var count = 0
 var ch = make(chan bool)
+
 var qh = make(chan bool)
 
 func init() {
@@ -44,7 +45,7 @@ func main() {
 func start() {
 	//关卡选择
 	robotgo.MoveClick(1037, 626, "left")
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	//队伍选择
 	robotgo.MoveMouse(984, 701)
 	for color := robotgo.GetPixelColor(984, 701); !strings.HasSuffix(color, "ffff"); {
@@ -54,12 +55,15 @@ func start() {
 	}
 	robotgo.MouseClick("left", true)
 	time.Sleep(2 * time.Second)
-	fight()
+	//fight
+	for i := 0; i < 5; i++ {
+		fight(i)
+	}
 	//战斗结算
 	robotgo.MoveClick(648, 354, "left", true)
 	time.Sleep(5 * time.Second)
 	robotgo.MoveClick(648, 354, "left", true)
-	time.Sleep(5 * time.Second)
+	time.Sleep(8 * time.Second)
 	//end
 	robotgo.MoveClick(781, 369, "left")
 	time.Sleep(2 * time.Second)
@@ -76,6 +80,7 @@ func start() {
 	time.Sleep(8 * time.Second)
 	robotgo.MoveClick(679, 566, "left", true)
 	time.Sleep(8 * time.Second)
+
 	//robotgo.MoveMouse(1086, 374)
 	//for color := robotgo.GetPixelColor(1086, 374); !strings.HasPrefix(color, "bc"); {
 	//	fmt.Println(color)
@@ -109,17 +114,39 @@ func skill() {
 
 }
 
-func fight() {
-	//战斗开始按钮
-	robotgo.MoveMouse(1071, 658)
-	for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
-		fmt.Println(color)
-		time.Sleep(1 * time.Second)
-		color = robotgo.GetPixelColor(1071, 658)
+//number 关卡
+func fight(number int) {
+	var fighting bool
+	if number != 1 {
+		if number != 5 {
+			go click()
+			<-qh
+		}
+
+		robotgo.MoveClick(1071, 658)
+		time.Sleep(5 * time.Second)
+		if !isGo() {
+			robotgo.MoveClick(893, 309, "left", true)
+			time.Sleep(2 * time.Second)
+		} else {
+			fighting = true
+		}
+
 	}
-	time.Sleep(2 * time.Second)
-	robotgo.MouseClick("left", true)
-	time.Sleep(1 * time.Second)
+
+	if number == 1 {
+		//战斗开始按钮
+		robotgo.MoveMouse(1071, 658)
+		for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
+			fmt.Println(color)
+			time.Sleep(1 * time.Second)
+			color = robotgo.GetPixelColor(1071, 658)
+		}
+		time.Sleep(2 * time.Second)
+		robotgo.MouseClick("left", true)
+		time.Sleep(1 * time.Second)
+
+	}
 	//hero up
 	robotgo.MoveMouse(1086, 374)
 	for color := robotgo.GetPixelColor(1086, 374); color != "bc911f"; {
@@ -136,7 +163,7 @@ func fight() {
 		time.Sleep(25 * time.Second)
 		select {
 		case <-ch:
-			qh <- true
+			//qh <- true
 			goto Loop
 		default:
 			continue
@@ -148,25 +175,48 @@ func fight() {
 	}
 Loop:
 	fmt.Println("循环外")
+	if fighting && number != 5 {
+		robotgo.MoveClick(648, 354, "left", true)
+		time.Sleep(3 * time.Second)
+		robotgo.MoveClick(648, 354, "left", true)
+		time.Sleep(8 * time.Second)
+		robotgo.MoveClick(781, 369, "left")
+		time.Sleep(2 * time.Second)
+		robotgo.MoveClick(782, 626, "left", true)
+		time.Sleep(2 * time.Second)
+
+	}
+	if number == 5 {
+		robotgo.MoveClick(648, 354, "left", true)
+		time.Sleep(3 * time.Second)
+		robotgo.MoveClick(648, 354, "left", true)
+		time.Sleep(12 * time.Second)
+		bonus()
+
+	}
 }
 
 func success() {
-	ticker := time.NewTicker(10 * time.Second)
+	time.Sleep(8 * time.Second)
+	ticker := time.NewTicker(8 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-qh:
-			goto Loop
+		//case <-qh:
+		//goto Loop
 		case <-ticker.C:
 			img := robotgo.CaptureImg()
 			li := gcv.FindAllImg(successImg, img)
+			fmt.Println(len(li))
 			if len(li) > 0 {
 				ch <- true
+				return
 			}
+			//return
 		}
 	}
-Loop:
-	return
+	//Loop:
+	//return
 }
 
 func Opencv() {
@@ -214,3 +264,46 @@ func Opencv() {
 }
 
 //621 767 f8f8f8
+func click() {
+	fixX, fixY := 137, 385
+	constAdd := 55
+	ticker := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			fixX = fixX + constAdd
+			robotgo.MoveClick(fixX, fixY, "left", true)
+			time.Sleep(300 * time.Millisecond)
+			robotgo.MoveMouse(1071, 658)
+			if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
+				qh <- true
+				return
+			}
+		}
+	}
+}
+
+func isGo() bool {
+	img := robotgo.CaptureImg()
+	mat := gcv.IMRead("start.png")
+	startImg, _ := gcv.MatToImg(mat)
+	li := gcv.FindAllImg(startImg, img)
+	return len(li) == 0
+
+}
+
+func bonus() {
+	img := robotgo.CaptureImg()
+	mat := gcv.IMRead("start.png")
+	startImg, _ := gcv.MatToImg(mat)
+	bonus := gcv.FindAllImg(startImg, img)
+	for _, box := range bonus {
+		x, y := box.Middle.X, box.Middle.Y
+		robotgo.MouseClick(x, y, "left", true)
+		time.Sleep(time.Second)
+	}
+	robotgo.MouseClick(643, 423, "left", true)
+	time.Sleep(5 * time.Second)
+	robotgo.MouseClick(633, 644, "left", true)
+	time.Sleep(2 * time.Second)
+}
