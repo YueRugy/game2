@@ -294,9 +294,9 @@ func isGo() bool {
 
 func bonus() {
 	img := robotgo.CaptureImg()
-	mat := gcv.IMRead("start.png")
-	startImg, _ := gcv.MatToImg(mat)
-	bonus := gcv.FindAllImg(startImg, img)
+	mat := gcv.IMRead("bonus.png")
+	bonusImg, _ := gcv.MatToImg(mat)
+	bonus := gcv.FindAllImg(bonusImg, img)
 	for _, box := range bonus {
 		x, y := box.Middle.X, box.Middle.Y
 		robotgo.MouseClick(x, y, "left", true)
