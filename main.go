@@ -53,8 +53,8 @@ func init() {
 			X: 810,
 			Y: 664,
 		})
-	//fMat := gcv.IMRead(flagPath)
-	//flagImg, _ = gcv.MatToImg(fMat)
+	fMat := gcv.IMRead(flagPath)
+	flagImg, _ = gcv.MatToImg(fMat)
 
 	//bMat := gcv.IMRead(bonusPath)
 	//bonusImg, _ = gcv.MatToImg(bMat)
@@ -66,9 +66,12 @@ func main() {
 	fmt.Println(x, y)
 	robotgo.MoveMouse(x, y)
 	fmt.Println(robotgo.GetMouseColor())
+    for {
+        time.Sleep(3*time.Second)  
+	    start()
+    }
 	//success()
 	//time.Sleep(1 * time.Second)
-	start()
 	//opencv()
 }
 
