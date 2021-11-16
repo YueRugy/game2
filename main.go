@@ -2,30 +2,23 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"strings"
 	"time"
 
 	"github.com/go-vgo/robotgo"
-	"github.com/vcaesar/gcv"
 )
 
 const (
-	successPath = "success.png"
-	flagPath    = "flag.png"
-	bonusPath   = "bonus.png"
+	returnFlag  = 0
+	cotinueFlag = 1
 )
 
 var (
-	successImg image.Image
-	flagImg    image.Image
-	//bonusImg   image.Image
+	clickCh         = make(chan bool)
+	listenCh        = make(chan int)
+	clickOnTickerCh = make(chan bool)
 )
 
-//var count = 0
-var ch = make(chan bool)
-
-var qh = make(chan bool)
 var bonusList []*Point
 
 type Point struct {
@@ -34,9 +27,6 @@ type Point struct {
 }
 
 func init() {
-
-	mat := gcv.IMRead(successPath)
-	successImg, _ = gcv.MatToImg(mat)
 	bonusList = make([]*Point, 0, 4)
 	bonusList = append(bonusList, &Point{
 		X: 519,
@@ -53,8 +43,8 @@ func init() {
 			X: 810,
 			Y: 664,
 		})
-	fMat := gcv.IMRead(flagPath)
-	flagImg, _ = gcv.MatToImg(fMat)
+	//fMat := gcv.IMRead(flagPath)
+	//flagImg, _ = gcv.MatToImg(fMat)
 
 	//bMat := gcv.IMRead(bonusPath)
 	//bonusImg, _ = gcv.MatToImg(bMat)
@@ -62,14 +52,10 @@ func init() {
 
 func main() {
 	time.Sleep(3 * time.Second)
-	x, y := robotgo.GetMousePos()
-	fmt.Println(x, y)
-	robotgo.MoveMouse(x, y)
-	fmt.Println(robotgo.GetMouseColor())
-    for {
-        time.Sleep(3*time.Second)  
-	    start()
-    }
+	for {
+		time.Sleep(3 * time.Second)
+		start()
+	}
 	//success()
 	//time.Sleep(1 * time.Second)
 	//opencv()
@@ -105,82 +91,62 @@ func skill() {
 	robotgo.MoveClick(508, 346, "left", true)
 	time.Sleep(2 * time.Second)
 	robotgo.MoveClick(1118, 359)
-	//robotgo.MoveMouse(1118, 359)
-	//for color := robotgo.GetPixelColor(1117, 366); color != "2e9f1b"; {
-	//	time.Sleep(3 * time.Second)
-	//	color = robotgo.GetPixelColor(1117, 366)
-	//}
-	//robotgo.MouseClick("left", true)
 	time.Sleep(2 * time.Second)
 
 }
 
 //number 关卡
 func fight(number int) {
-	var jump bool
 	if 1 < number && number < 5 {
 		go click()
-		<-qh
-		robotgo.MoveClick(178, 509, "left", true)
-		time.Sleep(2 * time.Second)
+		<-clickCh
 		//点击或者进入战斗房间
 		//click 函数说明已经可以点击
 		robotgo.MoveClick(1071, 658)
-		time.Sleep(18 * time.Second)
-		//判断是房间还是奖励项
-		jump = isGo()
-		fmt.Println(jump)
-
-		if jump {
-			robotgo.MoveClick(176, 509, "left", true)
-			time.Sleep(3 * time.Second)
-			robotgo.MoveClick(557, 332, "left", true)
-			time.Sleep(3 * time.Second)
-			fmt.Println("click...............")
+		go clickByTicker()
+		go listen()
+		select {
+		case flag := <-listenCh:
+			clickOnTickerCh <- true
+			if flag == returnFlag {
+				return
+			} else {
+				goto Start
+			}
+		case <-time.After(time.Second * 18):
+			clickOnTickerCh <- true
 			return
 		}
 	}
-
-	//不是第一关卡和boss关卡 要执行战斗开始按钮
-	if number == 1 || number == 5 {
-		//战斗开始按钮
-		robotgo.MoveMouse(1071, 658)
-		for color := robotgo.GetPixelColor(1071, 658); color != "d8ffff"; {
-			time.Sleep(1 * time.Second)
-			color = robotgo.GetPixelColor(1071, 658)
-		}
-		time.Sleep(2 * time.Second)
-		robotgo.MouseClick("left", true)
-		time.Sleep(2 * time.Second)
-
-	}
-
-	//hero up
-	robotgo.MoveMouse(1086, 374)
+Start:
+	robotgo.MoveClick(1071, 658)
+	<-time.After(time.Second)
 	for color := robotgo.GetPixelColor(1086, 374); color != "bc911f"; {
-		time.Sleep(1 * time.Second)
+		<-time.After(time.Second)
 		color = robotgo.GetPixelColor(1086, 374)
 	}
 	robotgo.MoveClick(1086, 374, "left", true)
-	time.Sleep(15 * time.Second)
 	go success()
 	for {
-		skill()
-		time.Sleep(25 * time.Second)
-		select {
-		case <-ch:
-			//qh <- true
-			goto Loop
-		default:
-			continue
+		for color := robotgo.GetPixelColor(1086, 374); color != "bc911f"; {
+			<-time.After(time.Second)
+			color = robotgo.GetPixelColor(1086, 374)
 		}
-		//robotgo.MoveMouse(621, 767)
-		//if robotgo.GetPixelColor(621, 767) != "f8f8f8" {
-		//break
-		//}
+		skill()
+		//time.Sleep(25 * time.Second)
+		select {
+		case flag := <-listenCh:
+			if flag == cotinueFlag {
+				fightEnd(number)
+				return
+			} else {
+				continue
+			}
+		}
 	}
-Loop:
-	fmt.Println("循环外")
+}
+
+func fightEnd(number int) {
 	if number != 5 {
 		robotgo.MoveClick(448, 354, "left", true)
 		time.Sleep(3 * time.Second)
@@ -192,46 +158,37 @@ Loop:
 		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(782, 626, "left", true)
 		time.Sleep(3 * time.Second)
-
 	} else {
 		robotgo.MoveClick(648, 354, "left", true)
 		time.Sleep(3 * time.Second)
 		robotgo.MoveClick(648, 354, "left", true)
 		time.Sleep(18 * time.Second)
 		bonus()
-
 	}
-	//Look:
-	//return
 }
 
 func success() {
-	time.Sleep(8 * time.Second)
+	time.Sleep(10 * time.Second)
 	ticker := time.NewTicker(8 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
-		//case <-qh:
-		//goto Loop
 		case <-ticker.C:
-			img := robotgo.CaptureImg()
-			li := gcv.FindAllImg(successImg, img)
-			//fmt.Println(len(li))
-			if len(li) > 0 {
-				ch <- true
+			if robotgo.GetPixelColor(1086, 374) == "bc911f" {
+				listenCh <- returnFlag
 				return
 			}
-			//return
+			if robotgo.GetPixelColor(1086, 374) == "bc911f" {
+				listenCh <- cotinueFlag
+				return
+			}
 		}
 	}
-	//Loop:
-	//return
 }
 
-//621 767 f8f8f8
 func click() {
 	if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
-		qh <- true
+		clickCh <- true
 	}
 	fixX, fixY := 137, 385
 	constAdd := 55
@@ -242,22 +199,14 @@ func click() {
 		case <-ticker.C:
 			fixX = fixX + constAdd
 			robotgo.MoveClick(fixX, fixY, "left", true)
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			robotgo.MoveMouse(1071, 658)
 			if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
-				qh <- true
+				clickCh <- true
 				return
 			}
 		}
 	}
-}
-
-func isGo() bool {
-	img := robotgo.CaptureImg()
-	li := gcv.FindAllImg(flagImg, img)
-	fmt.Println(len(li))
-	return len(li) == 0
-
 }
 
 func bonus() {
@@ -266,17 +215,38 @@ func bonus() {
 		time.Sleep(time.Second)
 
 	}
-	//img := robotgo.CaptureImg()
-	//bonus := gcv.FindAllImg(bonusImg, img)
-	//fmt.Println(len(bonus))
-	//for _, box := range bonus {
-	//	x, y := box.Middle.X, box.Middle.Y
-	//	fmt.Println(x, y)
-	//		robotgo.MoveClick(x, y, "left", true)
-	//	time.Sleep(time.Second)
-	//}
 	robotgo.MoveClick(643, 423, "left", true)
 	time.Sleep(5 * time.Second)
 	robotgo.MoveClick(633, 644, "left", true)
 	time.Sleep(2 * time.Second)
+}
+
+func listen() {
+	ticker := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
+				listenCh <- returnFlag
+				return
+			}
+			if robotgo.GetPixelColor(1071, 658) == "d8ffff" {
+				listenCh <- cotinueFlag
+				return
+			}
+		}
+	}
+}
+
+func clickByTicker() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-clickOnTickerCh:
+			return
+		case <-ticker.C:
+			robotgo.MoveClick(80, 80, "left")
+		}
+	}
 }
